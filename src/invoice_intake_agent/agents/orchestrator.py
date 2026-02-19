@@ -14,7 +14,7 @@ from ..tools.extract_invoice import extract_invoice
 from ..tools.notify import notify
 
 
-def build_pipeline() -> Agent:
+def build_orchestrator_agent() -> Agent:
     """Build the pipeline for the invoice intake agent."""
 
     instructions = (
@@ -45,21 +45,7 @@ def build_pipeline() -> Agent:
     )
 
 
-async def run_agent() -> None:
-    """Run the invoice intake orchestration agent with streaming output."""
 
-    pipeline = build_pipeline()
-    user_input = "Process the inbound email and its PDF attachment."
-
-    try:
-        result = Runner.run_streamed(pipeline, user_input, max_turns=6)
-        async for event in result.stream_events():
-            if event.type == "raw_response_event" and isinstance(
-                event.data, ResponseTextDeltaEvent
-            ):
-                print(event.data.delta, end="", flush=True, file=sys.stderr)
-    except InputGuardrailTripwireTriggered as e:
-        print("Guardrail blocked this input:", e, file=sys.stderr, flush=True)
 
 
 if __name__ == "__main__":
