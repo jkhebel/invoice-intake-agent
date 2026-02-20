@@ -16,7 +16,7 @@ from pdfminer.high_level import extract_text
 from agents import function_tool
 
 from ..agents.invoice_agent import run_invoice_agent
-from ..utils.emails import Email, load_emails
+from ..utils.emails import Email, load_email
 from ..utils.runtime import RUNTIME
 from ..utils import console as c
 
@@ -93,8 +93,12 @@ async def extract_invoice():
         spinner_cm = c.status("[green]Running invoice specialist...")
         spinner_cm.__enter__()
 
-    email = load_emails()[0]
+    if RUNTIME.email_path is None:
+        raise ValueError("Email path is not set")
+
+    email = load_email(RUNTIME.email_path)
     pdf_path = email.get_pdf_path()
+
     image_paths = convert_doc_to_images(pdf_path)
     pdf_text = extract_text_from_doc(pdf_path)
 
