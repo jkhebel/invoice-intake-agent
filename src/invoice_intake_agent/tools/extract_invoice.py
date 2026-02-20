@@ -1,6 +1,5 @@
 """Tools for extracting pdf invoices from emails."""
 
-import sys
 import warnings
 import logging
 from datetime import datetime
@@ -16,8 +15,10 @@ from pdfminer.high_level import extract_text
 
 from agents import function_tool
 
-from ..agents.invoice_agent import extract_invoice_one_shot
-from ..tools.emails import Email, load_emails
+from ..agents.invoice_agent import run_invoice_agent
+from ..utils.emails import Email, load_emails
+from ..utils.runtime import RUNTIME
+from ..utils import console as c
 
 
 class InvoiceExtractionError(RuntimeError):
@@ -78,8 +79,19 @@ def extract_text_from_doc(path):
 
 
 @function_tool
-def extract_invoice():
+async def extract_invoice():
     """Extract the invoice from the email."""
+
+    spinner_cm = None
+    if RUNTIME.verbose:
+        c.print("\n\n")
+        c.rule("Invoice Specialist", style="invoice")
+        c.pre("INVOICE", style="invoice")
+        c.print("Analyzing email + PDF text + PDF images\n")
+    else:
+        c.print("\nAnalyzing email + PDF text + PDF images\n", style="dim")
+        spinner_cm = c.status("[green]Running invoice specialist...")
+        spinner_cm.__enter__()
 
     email = load_emails()[0]
     pdf_path = email.get_pdf_path()
@@ -92,5 +104,15 @@ def extract_invoice():
         "pdf_images": image_paths,
     }
 
-    invoice = extract_invoice_one_shot(**invoice_data)
+    invoice = await run_invoice_agent(**invoice_data)
+
+    if RUNTIME.verbose:
+        c.rule("Invoice Specialist Complete", style="invoice")
+        c.print("\n\n")
+    else:
+        if spinner_cm is not None:
+            spinner_cm.__exit__(None, None, None)
+            spinner_cm = None
+        c.print("Invoice specialist completed.\n", style="dim")
+
     return invoice.model_dump()

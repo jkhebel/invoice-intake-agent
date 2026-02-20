@@ -14,7 +14,7 @@ from ..tools.extract_invoice import extract_invoice
 from ..tools.notify import notify
 
 
-def build_pipeline() -> Agent:
+def build_orchestrator_agent() -> Agent:
     """Build the pipeline for the invoice intake agent."""
 
     instructions = (
@@ -30,10 +30,9 @@ def build_pipeline() -> Agent:
         "- Announce when you are calling any tools.\n"
         "- Do not ask the user any questions.\n"
         "- Do not loop or retry tools.\n"
-        "- After extract_invoice(), print a short confirmation, followed by"
-        "the structured output of extract_invoice().\n"
         "- After notify() print a short confirmation with the output file path"
-        " returned by notify() followed by the human summary of the invoice.\n"
+        " returned by notify(), followed by the invoice'shuman summary.\n"
+        "- Start a new line for each tool call."
     )
 
     return Agent(
@@ -43,24 +42,3 @@ def build_pipeline() -> Agent:
         tools=[extract_invoice, notify],
         input_guardrails=[InputGuardrail(invoice_intake_guardrail)],
     )
-
-
-async def run_agent() -> None:
-    """Run the invoice intake orchestration agent with streaming output."""
-
-    pipeline = build_pipeline()
-    user_input = "Process the inbound email and its PDF attachment."
-
-    try:
-        result = Runner.run_streamed(pipeline, user_input, max_turns=6)
-        async for event in result.stream_events():
-            if event.type == "raw_response_event" and isinstance(
-                event.data, ResponseTextDeltaEvent
-            ):
-                print(event.data.delta, end="", flush=True, file=sys.stderr)
-    except InputGuardrailTripwireTriggered as e:
-        print("Guardrail blocked this input:", e, file=sys.stderr, flush=True)
-
-
-if __name__ == "__main__":
-    asyncio.run(run_agent())
