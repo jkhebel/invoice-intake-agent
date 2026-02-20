@@ -9,7 +9,6 @@ dependencies = [
     "asyncio>=4.0.0",
     "openai-agents>=0.9.1",
     "pdf2image>=1.17.0",
-    "pdfminer>=20191125",
     "pdfminer-six>=20260107",
     "pydantic>=2.12.5",
     "python-dotenv>=1.2.1",

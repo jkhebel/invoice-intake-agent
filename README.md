@@ -44,6 +44,7 @@ and tool-level logging.
 - Python 3.12+
 - uv
 - OpenAI API key
+- poppler (required for pdf2text)
 
 ---
 
@@ -68,6 +69,26 @@ src/invoice_intake_agent/
 ---
 
 ## 🛠 Setup
+
+Depending on your platform, you may need to install `poppler` first for PDF extraction to run.
+
+Ubuntu, Debian Linux:
+
+```bash
+sudo apt install poppler-utils
+```
+
+macOS:
+
+```bash
+brew install poppler
+```
+
+Windows
+```bash
+conda install poppler
+```
+
 
 This project uses **uv** for dependency management. Not that all **uv** commands should be run from the project root directory.
 
