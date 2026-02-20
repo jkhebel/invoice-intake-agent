@@ -30,10 +30,9 @@ def build_orchestrator_agent() -> Agent:
         "- Announce when you are calling any tools.\n"
         "- Do not ask the user any questions.\n"
         "- Do not loop or retry tools.\n"
-        "- After extract_invoice(), print a short confirmation, followed by"
-        "the structured output of extract_invoice().\n"
         "- After notify() print a short confirmation with the output file path"
-        " returned by notify() followed by the human summary of the invoice.\n"
+        " returned by notify(), followed by the invoice'shuman summary.\n"
+        "- Start a new line for each tool call."
     )
 
     return Agent(
@@ -43,10 +42,3 @@ def build_orchestrator_agent() -> Agent:
         tools=[extract_invoice, notify],
         input_guardrails=[InputGuardrail(invoice_intake_guardrail)],
     )
-
-
-
-
-
-if __name__ == "__main__":
-    asyncio.run(run_agent())

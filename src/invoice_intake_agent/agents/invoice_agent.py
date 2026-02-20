@@ -1,17 +1,19 @@
 """Agent for extracting information from invoice images."""
 
 import base64
-import sys
-import re
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 
-from agents import Agent, Runner, InputGuardrail, InputGuardrailTripwireTriggered
+from pathlib import Path
+from typing import Any, Dict, List
+
+from agents import Agent, Runner, InputGuardrail
 from openai.types.responses import ResponseTextDeltaEvent
 
 from ..config import MODEL
 from ..invoice_schema import Invoice
 from .guardrails import invoice_intake_guardrail
+
+from ..utils.runtime import RUNTIME
+from ..utils import console as c
 
 
 def _image_to_data_url(image_path: str) -> str:
@@ -29,21 +31,21 @@ def _image_to_data_url(image_path: str) -> str:
     return f"data:image/png;base64,{b64}"
 
 
+# TODO: move to utils
 def _safe_get(d: dict[str, Any], keys: list[str]) -> Any:
     """Get a value from a nested dictionary safely.
     Returns None instead of raising KeyError if a key is not found.
     """
-    for key in keys:
-        x: Any = d  # Used to traverse the dictionary
-        for key in keys:
-            if isinstance(x, dict) and key in x:
-                x = x[key]
-            else:
-                return None
-    return x if isinstance(x, str) else None
+    x: Any = d  # Used to traverse the dictionary
+    for k in keys:
+        if isinstance(x, dict) and k in x:
+            x = x[k]
+        else:
+            return None
+    return x
 
 
-def extract_invoice_one_shot(
+async def run_invoice_agent(
     *,
     email: dict[str, Any],
     pdf_text: str,
@@ -81,8 +83,8 @@ def extract_invoice_one_shot(
         input_guardrails=[InputGuardrail(invoice_intake_guardrail)],
     )
 
-    subject = _safe_get(email, ["Subject"])
-    body = _safe_get(email, ["Body", "Content"])
+    subject = _safe_get(email, ["Subject"]) or ""
+    body = _safe_get(email, ["Body", "Content"]) or ""
 
     # Construct the content for the agent to process (text + images)
     content: List[Dict[str, Any]] = [
@@ -106,20 +108,64 @@ def extract_invoice_one_shot(
             }
         )
 
-    result = Runner.run_sync(
+    messages = [{"role": "user", "content": content}]
+
+    result = Runner.run_streamed(
         invoice_agent,
-        [{"role": "user", "content": content}],
+        messages,
         max_turns=1,
     )
+
+    spinner_cm = None
+    if RUNTIME.verbose:
+        spinner_cm = c.status(
+            "[green]Invoice Specialist analyzing email + PDF text + PDF images..."
+        )
+        spinner_cm.__enter__()
+
+        at_line_start = True
+        async for event in result.stream_events():
+            if event.type == "raw_response_event" and isinstance(
+                event.data, ResponseTextDeltaEvent
+            ):
+                for ch in event.data.delta:
+                    if spinner_cm is not None:
+                        spinner_cm.__exit__(None, None, None)
+                        spinner_cm = None
+                    if at_line_start:
+                        c.pre("INVOICE_AGENT", style="invoice")
+                        at_line_start = False
+                    c.print(ch, style="dim", end="")
+                    if ch == "\n":
+                        at_line_start = True
+        if spinner_cm is not None:
+            spinner_cm.__exit__(None, None, None)
+            spinner_cm = None
+        if not at_line_start:
+            c.print("\n")
+    else:
+        # Minimal mode: just stream raw deltas.
+        async for _ in result.stream_events():
+            pass
+        if spinner_cm is not None:
+            spinner_cm.__exit__(None, None, None)
+            spinner_cm = None
+
     invoice: Invoice = result.final_output
 
     # TODO: supplement missing OPTIONAL fields from text/email by regex
 
     # Enforce Required Fields
-    if invoice.invoice_number is None or not invoice.invoice_number.strip():
+    if not invoice.invoice_number or not invoice.invoice_number.strip():
+        if RUNTIME.verbose:
+            c.error("INVOICE_AGENT failed to extract invoice number.")
+            c.rule("Invoice Specialist Error")
+            c.print("\n\n")
         raise ValueError(
             "Invoice number is required, but was not extracted."
             "Ensure you are rendering the images correctly."
         )
+    if RUNTIME.verbose:
+        c.ok("INVOICE_AGENT successfully extracted invoice number.")
 
     return invoice

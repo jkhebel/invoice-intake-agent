@@ -1,12 +1,13 @@
 """Tools for notifying Customer Service of successful invoice intake."""
 
-from __future__ import annotations
-
 import json
 import sys
 from pathlib import Path
 
 from agents import function_tool
+
+from ..utils.runtime import RUNTIME
+from ..utils import console as c
 
 from ..invoice_schema import Invoice
 
@@ -65,6 +66,20 @@ def notify(invoice: Invoice) -> dict:
     """
 
     invoice_no = invoice.invoice_number
+    summary = invoice.summary or "(no summary provided)"
+
+    spinner_cm = None
+    if RUNTIME.verbose:
+        c.print("\n\n")
+        c.rule("Notify Customer Service", style="tool")
+        c.pre("NOTIFY", style="tool")
+        c.print(
+            f"Preparing outbound notification for invoice {invoice_no}", style="dim"
+        )
+    else:
+        c.print("Running notification tool...\n", style="dim")
+        spinner_cm = c.status("[green]Notifying Customer Service...")
+        spinner_cm.__enter__()
 
     out_dir = Path("outputs")
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -73,15 +88,29 @@ def notify(invoice: Invoice) -> dict:
 
     email_payload = compose_email(invoice)
 
+    spinner_cm = None
+    if RUNTIME.verbose:
+        spinner_cm = c.status("[green]Writing outbound email JSON...")
+        spinner_cm.__enter__()
+
     json_path.write_text(
         json.dumps(email_payload, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
 
-    print(
-        f"Notification written to {json_path}",
-        file=sys.stderr,
-        flush=True,
-    )
+    if spinner_cm is not None:
+        spinner_cm.__exit__(None, None, None)
+
+    if RUNTIME.verbose:
+        c.ok(f"NOTIFY successfully wrote outbound email JSON to {json_path}.")
+        c.pre("NOTIFY", style="tool")
+        c.print(f"Summary: {summary}\n")
+        c.rule("Notify Customer Service Complete", style="tool")
+        c.print("\n\n")
+    else:
+        if spinner_cm is not None:
+            spinner_cm.__exit__(None, None, None)
+            spinner_cm = None
+        c.print(f"Notification written to {json_path}\n", style="dim")
 
     return {"outbound_email_json": str(json_path)}
