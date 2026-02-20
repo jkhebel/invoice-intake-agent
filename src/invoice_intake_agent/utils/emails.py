@@ -22,17 +22,17 @@ def load_emails(path: str | Path = "inputs") -> List[Dict[str, Any]]:
 
 class Email:
     def __init__(self: Dict[str, Any], path: str | Path = "inputs/Email.json"):
-        self.email = self.load_email(path)
+        self.source_path = Path(path).expanduser().resolve()
+        self.email = self._load_email(self.source_path)
 
     def __getitem__(self, key: str) -> Any:
         return self.email[key]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return self.email
 
-    def load_email(self, path: str | Path) -> Dict[str, Any]:
+    def _load_email(self, path: Path) -> dict[str, Any]:
         """Load an email from a file."""
-        path = Path(path).expanduser().resolve()
         if not path.exists():
             raise EmailLoadError(f"Email file not found: {path}")
         with open(path, "r", encoding="utf-8") as f:
@@ -44,5 +44,15 @@ class Email:
         """Get the PDF attachment path from the email."""
         for attachment in self.email["Attachments"]:
             if attachment["ContentType"] == "application/pdf":
-                return Path("inputs/" + attachment["Name"])
+                return Path(self.source_path.parent / attachment["Name"])
         raise EmailLoadError("No PDF attachment found in email")
+
+
+def load_email(path: str | Path = "inputs/Email.json") -> Email:
+    """Load an email from a JSON file."""
+    path = Path(path).expanduser().resolve()
+    if not path.exists():
+        raise EmailLoadError(f"Email file not found: {path}")
+    if path.suffix.lower() != ".json":
+        raise EmailLoadError(f"Email file must be a JSON file: {path}")
+    return Email(path)
