@@ -32,6 +32,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     p.add_argument(
+        "email",
+        help=(
+            "Path to the inbound email JSON file. "
+            "The PDF attachment must be in the same directory."
+        ),
+    )
+
+    p.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -72,7 +80,12 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
-    set_runtime(log_level=args.log_level, verbose=args.verbose, color=not args.no_color)
+    set_runtime(
+        email_path=args.email,
+        log_level=args.log_level,
+        verbose=args.verbose,
+        color=not args.no_color,
+    )
 
     asyncio.run(run_app())
 

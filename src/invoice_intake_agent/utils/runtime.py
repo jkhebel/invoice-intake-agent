@@ -18,6 +18,7 @@ class RuntimeConfig:
 
     log_level: LogLevel = LogLevel.MINIMAL
     color: bool = True
+    email_path: str | None = None
 
     @property
     def verbose(self) -> bool:
@@ -35,7 +36,11 @@ RUNTIME = RuntimeConfig()
 
 
 def set_runtime(
-    *, log_level: str | None = None, verbose: bool = False, color: bool = True
+    *,
+    email_path: str | None = None,
+    log_level: str | None = None,
+    verbose: bool = False,
+    color: bool = True,
 ) -> None:
     """Set the runtime configuration from CLI arguments."""
     level = RUNTIME.log_level
@@ -57,3 +62,4 @@ def set_runtime(
 
     RUNTIME.log_level = level
     RUNTIME.color = color
+    RUNTIME.email_path = email_path
