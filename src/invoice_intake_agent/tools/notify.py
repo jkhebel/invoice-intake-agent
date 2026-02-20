@@ -9,7 +9,7 @@ from agents import function_tool
 from ..utils.runtime import RUNTIME
 from ..utils import console as c
 
-from ..invoice_schema import Invoice
+from ..schema.invoice import Invoice
 
 
 def compose_email(invoice: Invoice) -> dict:
@@ -77,7 +77,7 @@ def notify(invoice: Invoice) -> dict:
             f"Preparing outbound notification for invoice {invoice_no}", style="dim"
         )
     else:
-        c.print("Running notification tool...\n", style="dim")
+        c.print("\nRunning notification tool...\n", style="dim")
         spinner_cm = c.status("[green]Notifying Customer Service...")
         spinner_cm.__enter__()
 

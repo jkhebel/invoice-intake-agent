@@ -9,7 +9,7 @@ from agents import Agent, Runner, InputGuardrail
 from openai.types.responses import ResponseTextDeltaEvent
 
 from ..config import MODEL
-from ..invoice_schema import Invoice
+from ..schema.invoice import Invoice
 from .guardrails import invoice_intake_guardrail
 
 from ..utils.runtime import RUNTIME

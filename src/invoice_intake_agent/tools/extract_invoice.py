@@ -89,7 +89,7 @@ async def extract_invoice():
         c.pre("INVOICE", style="invoice")
         c.print("Analyzing email + PDF text + PDF images\n")
     else:
-        c.print("Analyzing email + PDF text + PDF images\n", style="dim")
+        c.print("\nAnalyzing email + PDF text + PDF images\n", style="dim")
         spinner_cm = c.status("[green]Running invoice specialist...")
         spinner_cm.__enter__()
 
